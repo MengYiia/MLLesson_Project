@@ -134,7 +134,7 @@ class ScaledDotProductAttention(nn.Module):
         # Q @ K^T / sqrt(d_k)
         scores = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(d_k)
         # 添加mask，将mask位置设置为无限小，通过softmax基本就是0，最后打掩码位置就不会对结果产生影响
-        scores.masked_fill_(attention_mask, -1e9)
+        scores.masked_fill_(attention_mask.to(V.device), -1e9)
         # softmax(\frac{Q @ K^T}{ sqrt{d_k}})
         attention = self.softmax(scores)
         # softmax(\frac{Q @ K^T}{ sqrt{d_k}}) @ V
@@ -503,7 +503,7 @@ class Decoder(nn.Module):
             raise ValueError(f"'need_embedding'为True时，必须要设置合法的字典长度'vocab_size'!\a")
         if need_embedding is False and vocab_size != 0:
             warnings.warn(f"'need_embedding'为True时，字典长度'vocab_size'将不生效", UserWarning)
-        assert (need_embedding and vocab_size is not None) or (need_embedding is False and vocab_size is None)
+        assert (need_embedding and vocab_size != 0) or (need_embedding is False and vocab_size == 0)
         self.__need_embedding = need_embedding
         self.no_pad = no_pad
         self.pad_index_in_vocab = pad_index_in_vocab
@@ -700,7 +700,8 @@ class Transformer(nn.Module):
         decoder_self_attentions = decoder_encoder_attentions = None
         # 如果是训练
         if self.training:
-            decoder_input = torch.cat((torch.ones((encoder_input.shape[0], 1, self.embedding_dim)),
+            decoder_input = torch.cat((torch.ones((encoder_input.shape[0], 1,
+                                                   self.embedding_dim)).to(decoder_input.device),
                                        decoder_input), dim=1)
             decoder_output, decoder_self_attentions, decoder_encoder_attentions = \
                 self.decoder(decoder_input,
@@ -713,7 +714,7 @@ class Transformer(nn.Module):
                 warnings.warn("评估模式下，decoder_input不生效！", UserWarning)
 
             # 创建decoder第一个输入，全0作为开始符 [batch_size, seq_len, embedding_dim]
-            decoder_output = torch.ones((encoder_input.shape[0], 1, self.embedding_dim))
+            decoder_output = torch.ones((encoder_input.shape[0], 1, self.embedding_dim)).to(encoder_input.device)
             # 开始遍历时间进行预测
             for i in range(self.decoder_seq_len):
                 decoder_output_temp, decoder_self_attentions, decoder_encoder_attentions = \
@@ -724,7 +725,7 @@ class Transformer(nn.Module):
                         decoder_self_attention_pad_mask,
                         decoder_encoder_attention_pad_mask)
                 # 时间步上拼接
-                decoder_output = torch.cat((decoder_input, decoder_output_temp[:, -1, :].unsqueeze(1)), dim=1)
+                decoder_output = torch.cat((decoder_output, decoder_output_temp[:, -1, :].unsqueeze(1)), dim=1)
         # 将最后作为结束符号的词向量丢弃
         decoder_output = decoder_output[:, 0:-1, :]
         results = self.fc(decoder_output)

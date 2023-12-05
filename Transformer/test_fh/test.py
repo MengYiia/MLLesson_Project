@@ -51,14 +51,16 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
             end_idx = (i + 1) * batch_size
             X_batch = x_train[start_idx:end_idx]
             Y_batch = y_train[start_idx:end_idx]
-            output, () = model(X_batch, Y_batch)
+            output, _ = model(X_batch, Y_batch)
             # 计算均方误差
-            loss = criterion(output, Y_batch)
+
+            loss = criterion(torch.flatten(output, start_dim=0, end_dim=1),
+                             torch.flatten(Y_batch, start_dim=0, end_dim=1))
             # loss = criterion(output[:, -1, :], Y_batch[:, -1, :])
             total_loss += loss.item()
             batch_loss_list.append(loss.item())
             optimizer.zero_grad()
-            loss.backward(retain_graph=True)
+            loss.backward()
             optimizer.step()
             # loss = criterion(output, Y_batch)
             # 将out和labels reshape成2D张量
@@ -85,8 +87,8 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
                 Y_val_batch = y_val[start_idx:end_idx]
                 output_val, _ = model(X_val_batch)
 
-                out_reshaped = output_val.view(-1, 2)  # 5 * 3 = 15, output_dim=2
-                labels_reshaped = Y_val_batch.view(-1, 2)
+                out_reshaped = torch.flatten(output_val, start_dim=0, end_dim=1)  # 5 * 3 = 15, output_dim=2
+                labels_reshaped = torch.flatten(Y_val_batch, start_dim=0, end_dim=1)
 
                 val_loss += criterion(out_reshaped, labels_reshaped).item()
 
@@ -143,7 +145,7 @@ if __name__ == '__main__':
 
     logger = setting_logging('TransformerForETTh1')
     # 定义超参数
-    lr = 0.00005
+    lr = 0.00000001
     Epochs = 20
     batch_size = 256
     dataset_path = "../../data/ETTh1.csv"

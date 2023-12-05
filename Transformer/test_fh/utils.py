@@ -33,7 +33,7 @@ def setting_logging(log_name):
 
 def data_load(dataset, n_past):
     dataX, dataY = [], []
-    for i in range(n_past, len(dataset)):
+    for i in range(n_past, len(dataset) - n_past):
         dataX.append(dataset[i - n_past:i, 0:])
         dataY.append(dataset[i: i + n_past, 0:])
     return np.array(dataX), np.array(dataY)
