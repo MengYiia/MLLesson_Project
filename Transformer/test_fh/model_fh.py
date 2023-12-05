@@ -199,7 +199,8 @@ class MultiHeadSelfAttention(nn.Module):
         v_s = self.W_V(V).view(batch_size, -1, self.num_heads, self.v_dim).transpose(1, 2)
 
         # attention_mask
-        # [batch_size, seq_len, k_dim] -> [batch_size, 1, seq_len, k_dim] -> [batch_size, num_heads, seq_len, k_dim]
+        # [batch_size, q_seq_len, k_seq_len] -> [batch_size, 1, q_seq_len, k_seq_len]
+        # -> [batch_size, num_heads, q_seq_len, k_seq_len]
         attention_mask = attention_mask.unsqueeze(1).repeat(1, self.num_heads, 1, 1)
 
         # 通过ScaledDotProductAttention聚合上下文信息
@@ -337,7 +338,7 @@ class Encoder(nn.Module):
         if need_embedding and vocab_size <= 0:
             raise ValueError(f"'need_embedding'为True时，必须要设置合法的字典长度'vocab_size'!\a")
         if need_embedding is False and vocab_size != 0:
-            warnings.warn(f"'need_embedding'为True时，字典长度'vocab_size'将不生效", UserWarning)
+            warnings.warn(f"'need_embedding'为False时，字典长度'vocab_size'将不生效", UserWarning)
 
         assert (need_embedding and vocab_size != 0) or (need_embedding is False and vocab_size == 0)
         self.__need_embedding = need_embedding
@@ -699,6 +700,8 @@ class Transformer(nn.Module):
         decoder_self_attentions = decoder_encoder_attentions = None
         # 如果是训练
         if self.training:
+            decoder_input = torch.cat((torch.ones((encoder_input.shape[0], 1, self.embedding_dim)),
+                                       decoder_input), dim=1)
             decoder_output, decoder_self_attentions, decoder_encoder_attentions = \
                 self.decoder(decoder_input,
                              encoder_input,
@@ -710,7 +713,7 @@ class Transformer(nn.Module):
                 warnings.warn("评估模式下，decoder_input不生效！", UserWarning)
 
             # 创建decoder第一个输入，全0作为开始符 [batch_size, seq_len, embedding_dim]
-            decoder_output = torch.zeros((encoder_input.shape[0], 1, self.embedding_dim))
+            decoder_output = torch.ones((encoder_input.shape[0], 1, self.embedding_dim))
             # 开始遍历时间进行预测
             for i in range(self.decoder_seq_len):
                 decoder_output_temp, decoder_self_attentions, decoder_encoder_attentions = \
@@ -722,8 +725,8 @@ class Transformer(nn.Module):
                         decoder_encoder_attention_pad_mask)
                 # 时间步上拼接
                 decoder_output = torch.cat((decoder_input, decoder_output_temp[:, -1, :].unsqueeze(1)), dim=1)
-            # 将第一个作为开始符的词向量丢弃
-            decoder_output = decoder_output[:, 1:, :]
+        # 将最后作为结束符号的词向量丢弃
+        decoder_output = decoder_output[:, 0:-1, :]
         results = self.fc(decoder_output)
 
         return results, (encoder_self_attentions, decoder_self_attentions, decoder_encoder_attentions)
