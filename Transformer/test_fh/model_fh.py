@@ -82,7 +82,10 @@ class PositionalEncoding(nn.Module):
         # -> 广播机制变为 [seq_len, embedding_dim / 2] /dot [seq_len, embedding_dim / 2]
         positional_encoding[:, 0::2] = torch.sin(position * div_term)
         # 奇数部分
-        positional_encoding[:, 1::2] = torch.cos(position * div_term)
+        if embedding_dim % 2 == 0:
+            positional_encoding[:, 1::2] = torch.cos(position * div_term)
+        else:
+            positional_encoding[:, 1::2] = torch.cos(position * div_term[0:-1])
 
         # 定义为固定参数
         self.register_buffer('positional_encoding', positional_encoding)
@@ -336,7 +339,7 @@ class Encoder(nn.Module):
         if need_embedding is False and vocab_size != 0:
             warnings.warn(f"'need_embedding'为True时，字典长度'vocab_size'将不生效", UserWarning)
 
-        assert (need_embedding and vocab_size is not None) or (need_embedding is False and vocab_size is None)
+        assert (need_embedding and vocab_size != 0) or (need_embedding is False and vocab_size == 0)
         self.__need_embedding = need_embedding
         self.no_pad = no_pad
         self.padding_index_in_vocab = pad_index_in_vocab
@@ -708,15 +711,19 @@ class Transformer(nn.Module):
 
             # 创建decoder第一个输入，全0作为开始符 [batch_size, seq_len, embedding_dim]
             decoder_output = torch.zeros((encoder_input.shape[0], 1, self.embedding_dim))
+            # 开始遍历时间进行预测
             for i in range(self.decoder_seq_len):
-                decoder_output, decoder_self_attentions, decoder_encoder_attentions = \
+                decoder_output_temp, decoder_self_attentions, decoder_encoder_attentions = \
                     self.decoder(
                         decoder_output,
                         encoder_input,
                         encoder_output,
                         decoder_self_attention_pad_mask,
                         decoder_encoder_attention_pad_mask)
-
+                # 时间步上拼接
+                decoder_output = torch.cat((decoder_input, decoder_output_temp[:, -1, :].unsqueeze(1)), dim=1)
+            # 将第一个作为开始符的词向量丢弃
+            decoder_output = decoder_output[:, 1:, :]
         results = self.fc(decoder_output)
 
         return results, (encoder_self_attentions, decoder_self_attentions, decoder_encoder_attentions)
