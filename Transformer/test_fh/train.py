@@ -51,9 +51,12 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
             end_idx = (i + 1) * batch_size
             X_batch = x_train[start_idx:end_idx]
             Y_batch = y_train[start_idx:end_idx]
-            output, _ = model(X_batch, Y_batch)
+            # decoder输入拼接一个开始符号
+            decoder_input = torch.cat((torch.ones((Y_batch.shape[0], 1, Y_batch.shape[-1]),
+                                                  requires_grad=False).to(device),
+                                       Y_batch), dim=1)
+            output, _ = model(X_batch, decoder_input)
             # 计算均方误差
-
             loss = criterion(torch.flatten(output, start_dim=0, end_dim=1),
                              torch.flatten(Y_batch, start_dim=0, end_dim=1))
             # loss = criterion(output[:, -1, :], Y_batch[:, -1, :])
@@ -62,10 +65,7 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            # loss = criterion(output, Y_batch)
-            # 将out和labels reshape成2D张量
-            # out_reshaped = output.view(-1, 2)  # 5 * 3 = 15, output_dim=2
-            # labels_reshaped = Y_batch.view(-1, 2)
+
             # 更新平均误差值
             pbar.set_postfix(**{'loss': total_loss / (i + 1)})
             pbar.update(1)
@@ -85,9 +85,12 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
                 end_idx = (i + 1) * batch_size
                 X_val_batch = x_val[start_idx:end_idx]
                 Y_val_batch = y_val[start_idx:end_idx]
-                output_val, _ = model(X_val_batch)
+                # 创建decoder第一个输入，全1作为开始符 [batch_size, seq_len, embedding_dim]
+                decoder_input = torch.ones((X_val_batch.shape[0], 1, X_val_batch.shape[-1]), requires_grad=False).to(device)
 
-                out_reshaped = torch.flatten(output_val, start_dim=0, end_dim=1)  # 5 * 3 = 15, output_dim=2
+                output_val, _ = model(X_val_batch, decoder_input)
+
+                out_reshaped = torch.flatten(output_val, start_dim=0, end_dim=1)
                 labels_reshaped = torch.flatten(Y_val_batch, start_dim=0, end_dim=1)
 
                 val_loss += criterion(out_reshaped, labels_reshaped).item()
@@ -119,16 +122,16 @@ if __name__ == '__main__':
     n_heads = 8
     n_layers = 6
     src_len = 96
-    target_len = 336
-    dim_k = 2
-    dim_v = 2
+    target_len = 96
+    dim_k = 8
+    dim_v = 8
 
     model = Transformer(embedding_dim=embed_dim,
                         num_heads=n_heads,
                         encoder_num_layers=n_layers,
                         decoder_num_layers=n_layers,
                         encoder_seq_len=src_len,
-                        decoder_seq_len=target_len,
+                        decoder_seq_len=target_len + 1,  # 由于考虑到开始符, decoder序列长度实际要加一
                         result_size=embed_dim,
                         k_dim=dim_k,
                         v_dim=dim_v)
@@ -145,9 +148,9 @@ if __name__ == '__main__':
 
     logger = setting_logging('TransformerForETTh1')
     # 定义超参数
-    lr = 0.00000001
+    lr = 1e-10
     Epochs = 20
-    batch_size = 256
+    batch_size = 64
     dataset_path = "../../data/ETTh1.csv"
 
     train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, min_val_loss)

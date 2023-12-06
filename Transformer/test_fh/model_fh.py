@@ -620,6 +620,7 @@ class Transformer(nn.Module):
                  k_dim: int = 0,
                  v_dim: int = 0,
                  ffn_hidden_size: int = 0,
+                 need_end_word: bool = False,
                  need_embedding: bool = False,
                  encoder_vocab_size: int = 0,
                  decoder_vocab_size: int = 0,
@@ -638,6 +639,7 @@ class Transformer(nn.Module):
         :param k_dim: 单头注意力key的维度
         :param v_dim: 单头注意力value的维度
         :param ffn_hidden_size: 前馈神经网络隐藏层大小
+        :param need_end_word: 是否需要最后结尾词
         :param need_embedding: 是否需要embedding
         :param encoder_vocab_size: encoder词典长度（只有在need_embedding=True时生效）
         :param decoder_vocab_size: decoder词典长度（只有在need_embedding=True时生效）
@@ -646,8 +648,10 @@ class Transformer(nn.Module):
         :param no_pad: 输入序列没有pad，模型将自动生成全0mask，默认为False（need_embedding为True时不生效）
         """
         super(Transformer, self).__init__()
+        self.need_embedding = need_embedding
         self.decoder_seq_len = decoder_seq_len
         self.embedding_dim = embedding_dim
+        self.need_end_word = need_end_word
         # 实例化encoder
         self.encoder = Encoder(embedding_dim=embedding_dim,
                                num_heads=num_heads,
@@ -679,7 +683,7 @@ class Transformer(nn.Module):
 
     def forward(self,
                 encoder_input,
-                decoder_input=None,
+                decoder_input,
                 encoder_attention_pad_mask=None,
                 decoder_self_attention_pad_mask=None,
                 decoder_encoder_attention_pad_mask=None):
@@ -690,19 +694,18 @@ class Transformer(nn.Module):
         :param encoder_attention_pad_mask: encoder自注意力掩码
         :param decoder_self_attention_pad_mask: decoder自注意力掩码
         :param decoder_encoder_attention_pad_mask: decoder-encoder交叉注意力掩码
-        :return:
+        :return: (results: [batch_size, decoder_seq_len or decoder_seq_len - 1, embedding_dim],
+                    (encoder_self_attentions, decoder_self_attentions, decoder_encoder_attentions))
         """
-        if self.training and decoder_input is None:
-            raise ValueError("训练模式下，decoder的输入不能为None！")
 
+        # 输入encoder
         encoder_output, encoder_self_attentions = self.encoder(encoder_input, encoder_attention_pad_mask)
 
+        # 创建decoder的注意力矩阵列表
         decoder_self_attentions = decoder_encoder_attentions = None
-        # 如果是训练
+
+        # 判断当前模式是训练还是预测
         if self.training:
-            decoder_input = torch.cat((torch.ones((encoder_input.shape[0], 1,
-                                                   self.embedding_dim)).to(decoder_input.device),
-                                       decoder_input), dim=1)
             decoder_output, decoder_self_attentions, decoder_encoder_attentions = \
                 self.decoder(decoder_input,
                              encoder_input,
@@ -710,13 +713,10 @@ class Transformer(nn.Module):
                              decoder_self_attention_pad_mask,
                              decoder_encoder_attention_pad_mask)
         else:
-            if decoder_input is not None:
-                warnings.warn("评估模式下，decoder_input不生效！", UserWarning)
-
-            # 创建decoder第一个输入，全0作为开始符 [batch_size, seq_len, embedding_dim]
-            decoder_output = torch.ones((encoder_input.shape[0], 1, self.embedding_dim)).to(encoder_input.device)
+            decoder_output = decoder_input
             # 开始遍历时间进行预测
-            for i in range(self.decoder_seq_len):
+            # 注意，decoder_seq_len 比实际的输入长度多1，因为输入包含了输入符
+            for i in range(self.decoder_seq_len - 1):
                 decoder_output_temp, decoder_self_attentions, decoder_encoder_attentions = \
                     self.decoder(
                         decoder_output,
@@ -725,9 +725,12 @@ class Transformer(nn.Module):
                         decoder_self_attention_pad_mask,
                         decoder_encoder_attention_pad_mask)
                 # 时间步上拼接
-                decoder_output = torch.cat((decoder_output, decoder_output_temp[:, -1, :].unsqueeze(1)), dim=1)
-        # 将最后作为结束符号的词向量丢弃
-        decoder_output = decoder_output[:, 0:-1, :]
+                decoder_output = torch.cat((decoder_output, decoder_output_temp.detach()[:, -1, :].unsqueeze(1)), dim=1)
+        # 如果不需要最后结尾词
+        if self.need_end_word is False:
+            # 将最后作为结束符号的词向量丢弃
+            decoder_output = decoder_output[:, 0:-1, :]
+
         results = self.fc(decoder_output)
 
         return results, (encoder_self_attentions, decoder_self_attentions, decoder_encoder_attentions)
@@ -775,6 +778,7 @@ if __name__ == '__main__':
                         v_dim=dim_v,
                         encoder_vocab_size=src_vocab_size,
                         decoder_vocab_size=tgt_vocab_size,
+                        need_end_word=True,
                         need_embedding=True)
 
     enc_inputs, dec_inputs, target_batch = make_batch(sentences, src_vocab, tgt_vocab)
@@ -785,7 +789,7 @@ if __name__ == '__main__':
         optimizer.zero_grad()
         outputs, (enc_self_attns, dec_self_attns, dec_enc_attns) = model(enc_inputs, dec_inputs)
         # output:[batch_size, tgt_len, tgt_vocab_size]
-        loss = criterion(outputs.view(1 * 5, 7), target_batch.view(-1))
+        loss = criterion(outputs.view(-1, tgt_vocab_size), target_batch.view(-1))
         print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.6f}'.format(loss))
         loss.backward()
         optimizer.step()
