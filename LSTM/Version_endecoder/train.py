@@ -90,8 +90,8 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
                 Y_val_batch = y_val[start_idx:end_idx]
                 output_val = model(X_val_batch)
 
-                out_reshaped = output_val.view(-1, 2)  # 5 * 3 = 15, output_dim=2
-                labels_reshaped = Y_val_batch.view(-1, 2)
+                out_reshaped = output_val.view(-1, 7)
+                labels_reshaped = Y_val_batch.view(-1, 7)
 
                 val_loss += criterion(out_reshaped, labels_reshaped).item()
 

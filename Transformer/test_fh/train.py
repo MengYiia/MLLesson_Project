@@ -54,10 +54,16 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
             end_idx = (i + 1) * batch_size
             X_batch = x_train[start_idx:end_idx]
             Y_batch = y_train[start_idx:end_idx]
-            # decoder输入拼接一个开始符号
-            decoder_input = torch.cat((torch.ones((Y_batch.shape[0], 1, Y_batch.shape[-1]),
-                                                  requires_grad=False).to(device),
-                                       Y_batch), dim=1)
+            # decoder输入拼接一个全1的开始符号
+            # decoder_input = torch.cat((torch.ones((Y_batch.shape[0], 1, Y_batch.shape[-1]),requires_grad=False).to(device),Y_batch), dim=1)
+
+            # decoder输入拼接encoder_input的最后一个数据
+            # decoder_input = torch.cat((X_batch[:, -1, :].unsqueeze(1), Y_batch), dim=1)
+
+            # decoder_input输入拼接encoder_input的最后一个数据, encoder_input仅输入0-94.
+            decoder_input = torch.cat((X_batch[:, -1, :].unsqueeze(1), Y_batch), dim=1)
+            X_batch = X_batch[:, :-1, :]
+
             output, _ = model(X_batch, decoder_input)
             # 计算均方误差
             loss = criterion(torch.flatten(output, start_dim=0, end_dim=1),
@@ -89,7 +95,16 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
                 X_val_batch = x_val[start_idx:end_idx]
                 Y_val_batch = y_val[start_idx:end_idx]
                 # 创建decoder第一个输入，全1作为开始符 [batch_size, seq_len, embedding_dim]
-                decoder_input = torch.ones((X_val_batch.shape[0], 1, X_val_batch.shape[-1]), requires_grad=False).to(device)
+                # decoder_input = torch.ones((X_val_batch.shape[0], 1, X_val_batch.shape[-1]), requires_grad=False).to(device)
+
+                # decoder取encoder_input的最后一个
+                # decoder_input = X_val_batch[:, -1, :].unsqueeze(1)
+
+                # decoder取95, encoder_input:0-94
+                # decoder_input = X_val_batch[:, -1, :].unsqueeze(1)
+                # X_val_batch = X_val_batch[:, :-1, :]
+
+                # 创建decoder第一个
 
                 output_val, _ = model(X_val_batch, decoder_input)
 
@@ -105,10 +120,10 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
         model.train()  # 切换回训练模式
         if avg_val_loss <= min_val_loss:
             min_val_loss = avg_val_loss
-            logger.info('保存效果最好的模型:best_epoch_model_96.pth')
+            logger.info('保存效果最好的模型:best_epoch_model_newnewStart.pth')
             model_dict = model.state_dict()
             model_dict['min_val_loss'] = avg_val_loss
-            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_96.pth"))
+            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_newnewStart.pth"))
 
     # 绘损失图
     plt.plot(batch_loss_list)
@@ -124,7 +139,7 @@ if __name__ == '__main__':
     embed_dim = 7
     n_heads = 8
     n_layers = 3
-    src_len = 96
+    src_len = 95
     target_len = 96
     dim_k = 2
     dim_v = 2
@@ -139,8 +154,8 @@ if __name__ == '__main__':
                         k_dim=dim_k,
                         v_dim=dim_v)
 
-    save_model_dir = "model"
-    model_path = "model/best_epoch_model.pth"
+    save_model_dir = "../model"
+    model_path = "../model/best_epoch_model_newnewStart.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']
