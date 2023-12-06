@@ -23,7 +23,7 @@ def test(model, dataset_path, logger, start_index, index) -> None:
         logger.info(f'获取到设备 {torch.cuda.get_device_name(device.index)}')
     model = model.to(device)
 
-    dataset = ETTh1(dataset_path)
+    dataset = ETTh1(dataset_path, is_scaler=False)
     x_test, _ = dataset.get_data("test")
     x_test = x_test.to(device)
 
@@ -37,15 +37,20 @@ def test(model, dataset_path, logger, start_index, index) -> None:
         # decoder_input = temp_test_x[:, -1, :].unsqueeze(1)
 
         # decoder输入95, encoder_input:0-94
-        decoder_input = temp_test_x[:, -1, :].unsqueeze(1)
-        temp_test_x = temp_test_x[:, :-1, :]
+        # decoder_input = temp_test_x[:, -1, :].unsqueeze(1)
+        # temp_test_x = temp_test_x[:, :-1, :]
+
+        # 创建decoder第一个输入，全-1作为开始符 [batch_size, seq_len, embedding_dim]
+        decoder_input = (torch.ones((1, 1, x_test.shape[-1]), requires_grad=False) * -1).to(device)
 
         y_pre, _ = model(temp_test_x, decoder_input)
 
     y_temp_test = torch.concat((x_test[start_index], x_test[start_index + 96]), dim=0).tolist()
 
-    y_temp_test = dataset.inverse_fit_transform(y_temp_test)
-    y_pre = dataset.inverse_fit_transform(y_pre.squeeze(0).to('cpu').tolist())
+    # y_temp_test = dataset.inverse_fit_transform(y_temp_test)
+    # y_pre = dataset.inverse_fit_transform(y_pre.squeeze(0).to('cpu').tolist())
+
+    y_pre = y_pre.squeeze(0).to('cpu').tolist()
 
     # 创建横坐标
     x1 = list(range(start_index, start_index + 192))
@@ -64,7 +69,7 @@ if __name__ == '__main__':
     embed_dim = 7
     n_heads = 8
     n_layers = 3
-    src_len = 95
+    src_len = 96
     target_len = 96
     dim_k = 2
     dim_v = 2
@@ -77,10 +82,11 @@ if __name__ == '__main__':
                         decoder_seq_len=target_len + 1,  # 由于考虑到开始符, decoder序列长度实际要加一
                         result_size=embed_dim,
                         k_dim=dim_k,
-                        v_dim=dim_v)
+                        v_dim=dim_v,
+                        ffn_mode='conv')
 
     save_model_dir = "../model"
-    model_path = "../model/best_epoch_model_newnewStart.pth"
+    model_path = "../model/best_epoch_model_newnewnewStart_conv_Noscaler.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']
@@ -97,6 +103,6 @@ if __name__ == '__main__':
     dataset_path = "../../data/ETTh1.csv"
 
     start_index = 100
-    index = 2
+    index = 0
 
     test(model, dataset_path, logger, start_index, index)
