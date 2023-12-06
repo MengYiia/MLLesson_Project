@@ -1,6 +1,8 @@
+import torch.nn
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
+from Transformer.test_fh.LossFunction import MaeAndMseLoss
 from model_fh import *
 from DataSet import ETTh1
 import os
@@ -36,7 +38,8 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
     num_batches = int(np.ceil(x_train.shape[0] / batch_size))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = torch.nn.MSELoss()
+    criterion = MaeAndMseLoss().to(device)
+
     batch_loss_list = []
     model.train()
 
@@ -120,11 +123,11 @@ if __name__ == '__main__':
     # 模型参数
     embed_dim = 7
     n_heads = 8
-    n_layers = 6
+    n_layers = 3
     src_len = 96
     target_len = 96
-    dim_k = 8
-    dim_v = 8
+    dim_k = 2
+    dim_v = 2
 
     model = Transformer(embedding_dim=embed_dim,
                         num_heads=n_heads,
@@ -148,9 +151,9 @@ if __name__ == '__main__':
 
     logger = setting_logging('TransformerForETTh1')
     # 定义超参数
-    lr = 1e-10
+    lr = 1e-5
     Epochs = 20
-    batch_size = 64
+    batch_size = 256
     dataset_path = "../../data/ETTh1.csv"
 
     train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, min_val_loss)
