@@ -134,7 +134,7 @@ class ScaledDotProductAttention(nn.Module):
         # Q @ K^T / sqrt(d_k)
         scores = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(d_k)
         # 添加mask，将mask位置设置为无限小，通过softmax基本就是0，最后打掩码位置就不会对结果产生影响
-        scores.masked_fill_(attention_mask.to(V.device), -1e9)
+        scores.masked_fill_(attention_mask.to(scores.device), -1e9)
         # softmax(\frac{Q @ K^T}{ sqrt{d_k}})
         attention = self.softmax(scores)
         # softmax(\frac{Q @ K^T}{ sqrt{d_k}}) @ V
