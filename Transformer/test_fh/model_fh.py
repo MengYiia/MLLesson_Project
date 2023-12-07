@@ -75,17 +75,18 @@ class PositionalEncoding(nn.Module):
         positional_encoding = torch.zeros(seq_len, embedding_dim)
         # 生成位置（这里添加一个维度在前面是为了后面批次计算）[seq_len] -> [seq_len, 1]
         position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
-        # e^{-\frac{2i}{d} ln(10000)} shape: [embedding_dim / 2]
+        # e^{-\frac{2i}{d_k} ln(10000)} shape: [embedding_dim / 2]
         div_term = torch.exp(-(torch.arange(0, embedding_dim, 2).float() / embedding_dim) * (math.log(10000.0)))
         # 偶数部分
         # position[seq_len, 1] * div_term[embedding_dim / 2]
         # -> 广播机制变为 [seq_len, embedding_dim / 2] /dot [seq_len, embedding_dim / 2]
         positional_encoding[:, 0::2] = torch.sin(position * div_term)
         # 奇数部分
-        if embedding_dim % 2 == 0:
-            positional_encoding[:, 1::2] = torch.cos(position * div_term)
-        else:
-            positional_encoding[:, 1::2] = torch.cos(position * div_term[0:-1])
+        if embedding_dim > 1:
+            if embedding_dim % 2 == 0:
+                positional_encoding[:, 1::2] = torch.cos(position * div_term)
+            else:
+                positional_encoding[:, 1::2] = torch.cos(position * div_term[0:-1])
 
         # 定义为固定参数
         self.register_buffer('positional_encoding', positional_encoding)
