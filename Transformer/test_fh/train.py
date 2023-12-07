@@ -27,7 +27,7 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
         logger.info(f'获取到设备 {torch.cuda.get_device_name(device.index)}')
     model = model.to(device)
 
-    dataset = ETTh1(dataset_path, is_scaler=False)
+    dataset = ETTh1(dataset_path)
     x_train, y_train = dataset.get_data("train")
 
     x_val, y_val = dataset.get_data("val")
@@ -61,11 +61,11 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
             # decoder_input = torch.cat((X_batch[:, -1, :].unsqueeze(1), Y_batch), dim=1)
 
             # decoder_input输入拼接encoder_input的最后一个数据, encoder_input仅输入0-94.
-            # decoder_input = torch.cat((X_batch[:, -1, :].unsqueeze(1), Y_batch), dim=1)
-            # X_batch = X_batch[:, :-1, :]
+            decoder_input = torch.cat((X_batch[:, -1, :].unsqueeze(1), Y_batch), dim=1)
+            X_batch = X_batch[:, :-1, :]
 
             # decoder输入拼接一个全-1的开始符号
-            decoder_input = torch.cat(((torch.ones((Y_batch.shape[0], 1, Y_batch.shape[-1]),requires_grad=False) * -1).to(device),Y_batch), dim=1)
+            # decoder_input = torch.cat(((torch.ones((Y_batch.shape[0], 1, Y_batch.shape[-1]),requires_grad=False) * -1).to(device),Y_batch), dim=1)
 
             output, _ = model(X_batch, decoder_input)
             # 计算均方误差
@@ -104,11 +104,11 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
                 # decoder_input = X_val_batch[:, -1, :].unsqueeze(1)
 
                 # decoder取95, encoder_input:0-94
-                # decoder_input = X_val_batch[:, -1, :].unsqueeze(1)
-                # X_val_batch = X_val_batch[:, :-1, :]
+                decoder_input = X_val_batch[:, -1, :].unsqueeze(1)
+                X_val_batch = X_val_batch[:, :-1, :]
 
                 # 创建decoder第一个输入，全-1作为开始符 [batch_size, seq_len, embedding_dim]
-                decoder_input = (torch.ones((X_val_batch.shape[0], 1, X_val_batch.shape[-1]), requires_grad=False) * -1).to(device)
+                # decoder_input = (torch.ones((X_val_batch.shape[0], 1, X_val_batch.shape[-1]), requires_grad=False) * -1).to(device)
 
                 output_val, _ = model(X_val_batch, decoder_input)
 
@@ -124,10 +124,10 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
         model.train()  # 切换回训练模式
         if avg_val_loss <= min_val_loss:
             min_val_loss = avg_val_loss
-            logger.info('保存效果最好的模型:best_epoch_model_newnewnewStart_conv_Noscaler.pth')
+            logger.info('保存效果最好的模型:best_epoch_model_newnewStart_conv3.pth')
             model_dict = model.state_dict()
             model_dict['min_val_loss'] = avg_val_loss
-            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_newnewnewStart_conv_Noscaler.pth"))
+            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_newnewStart_conv3.pth"))
 
     # 绘损失图
     plt.plot(batch_loss_list)
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     embed_dim = 7
     n_heads = 8
     n_layers = 3
-    src_len = 96
+    src_len = 95
     target_len = 96
     dim_k = 2
     dim_v = 2
@@ -160,7 +160,7 @@ if __name__ == '__main__':
                         ffn_mode='conv')
 
     save_model_dir = "../model"
-    model_path = "../model/best_epoch_model_newnewnewStart_conv_Noscaler.pth"
+    model_path = "../model/best_epoch_model_newnewStart_conv3.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']
@@ -171,8 +171,8 @@ if __name__ == '__main__':
 
     logger = setting_logging('TransformerForETTh1')
     # 定义超参数
-    lr = 1e-5
-    Epochs = 20
+    lr = 1e-6
+    Epochs = 40
     batch_size = 256
     dataset_path = "../../data/ETTh1.csv"
 

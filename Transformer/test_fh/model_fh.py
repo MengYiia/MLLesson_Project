@@ -242,9 +242,9 @@ class PositionWiseFeedForward(nn.Module):
                 nn.Linear(in_features=hidden_size, out_features=input_size, bias=False))
         elif self.__mode == 'conv':
             self.conv = nn.Sequential(
-                nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=3, bias=False),
+                nn.Conv1d(in_channels=input_size, out_channels=hidden_size, kernel_size=3, padding=1, bias=False),
                 nn.GELU(),
-                nn.Conv1d(in_channels=hidden_size, out_channels=input_size, kernel_size=3, bias=False)
+                nn.Conv1d(in_channels=hidden_size, out_channels=input_size, kernel_size=3, padding=1, bias=False)
             )
         self.layer_norm = nn.LayerNorm(input_size)
 
