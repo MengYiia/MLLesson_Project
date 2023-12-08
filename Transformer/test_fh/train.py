@@ -2,24 +2,24 @@ import torch.nn
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from Transformer.test_fh.LossFunction import MaeAndMseLoss
+from Transformer.test_fh.LossFunction import MaeAndMseLoss, SoftDTW
 from model_fh import *
 from DataSet import ETTh1
 import os
 from utils import *
 
 
-def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, min_val_loss=1e100) -> None:
+def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, weight_decay, min_val_loss=1e100) -> None:
     """
     训练函数
     :param model: 要训练的模型
-    :param train_dataset: 训练集
-    :param val_dataset: 验证集
+    :param dataset_path: 数据集路径
     :param batch_size: 批处理大小
     :param lr: 学习率
     :param Epoch: 总的训练迭代次数
     :param logger: 日志器
-    :param model_path: 模型保存路径
+    :param save_model_dir: 模型保存路径
+    :param weight_decay: 正则化系数
     :return: None
     """
     device = ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -37,8 +37,8 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
     # 计算总共的批次数（向上取整）
     num_batches = int(np.ceil(x_train.shape[0] / batch_size))
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = MaeAndMseLoss().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    criterion = nn.MSELoss().to(device)
 
     batch_loss_list = []
     model.train()
@@ -138,6 +138,7 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
 
 
 if __name__ == '__main__':
+    # torch.autograd.set_detect_anomaly(True)
 
     # 模型参数
     embed_dim = 7
@@ -171,9 +172,10 @@ if __name__ == '__main__':
 
     logger = setting_logging('TransformerForETTh1')
     # 定义超参数
-    lr = 1e-6
-    Epochs = 40
+    lr = 1e-5
+    Epochs = 20
     batch_size = 256
     dataset_path = "../../data/ETTh1.csv"
+    weight_decay = 1e-3
 
     train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, min_val_loss)

@@ -103,7 +103,7 @@ if __name__ == '__main__':
     batch_size = 256
     dataset_path = "../../data/ETTh1.csv"
 
-    start_index = 100
-    index = -1
+    start_index = 300
+    index = 0
 
     test(model, dataset_path, logger, start_index, index)

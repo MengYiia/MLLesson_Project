@@ -300,7 +300,7 @@ class EncodeLayer(nn.Module):
         return output, attention
 
 
-class Encoder(nn.Module):
+class TransformerEncoder(nn.Module):
     """
     Encoder
     注意这里可选是否需要embedding，需要embedding时请指定字典长度vocab_size和pad符在字典中的索引pad_index_in_vocab
@@ -334,7 +334,7 @@ class Encoder(nn.Module):
         :param no_pad: 输入序列没有pad，模型将自动生成全0mask，默认为False（need_embedding为True时不生效）
         :param ffn_mode: 前馈神经网络模式，默认为线性
         """
-        super(Encoder, self).__init__()
+        super(TransformerEncoder, self).__init__()
         # 检验参数合理性
         if need_embedding and vocab_size <= 0:
             raise ValueError(f"'need_embedding'为True时，必须要设置合法的字典长度'vocab_size'!\a")
@@ -464,7 +464,7 @@ class DecoderLayer(nn.Module):
         return decoder_output, decoder_self_attention, decoder_encoder_attention
 
 
-class Decoder(nn.Module):
+class TransformerDecoder(nn.Module):
     """
     Encoder
     注意这里可选是否需要embedding，需要embedding时请指定字典长度vocab_size和pad符在字典中的索引pad_index_in_vocab
@@ -498,7 +498,7 @@ class Decoder(nn.Module):
         :param ffn_mode: 前馈神经网络模式，默认为线性
         :param no_pad: 输入序列没有pad，模型将自动生成全0mask，默认为False（need_embedding为True时不生效）
         """
-        super(Decoder, self).__init__()
+        super(TransformerDecoder, self).__init__()
         # 检验参数合理性
         if need_embedding and vocab_size <= 0:
             raise ValueError(f"'need_embedding'为True时，必须要设置合法的字典长度'vocab_size'!\a")
@@ -654,33 +654,34 @@ class Transformer(nn.Module):
         self.embedding_dim = embedding_dim
         self.need_end_word = need_end_word
         # 实例化encoder
-        self.encoder = Encoder(embedding_dim=embedding_dim,
-                               num_heads=num_heads,
-                               seq_len=encoder_seq_len,
-                               num_layers=encoder_num_layers,
-                               k_dim=k_dim,
-                               v_dim=v_dim,
-                               ffn_hidden_size=ffn_hidden_size,
-                               need_embedding=need_embedding,
-                               vocab_size=encoder_vocab_size,
-                               pad_index_in_vocab=pad_index_in_vocab,
-                               ffn_mode=ffn_mode,
-                               no_pad=no_pad)
+        self.encoder = TransformerEncoder(embedding_dim=embedding_dim,
+                                          num_heads=num_heads,
+                                          seq_len=encoder_seq_len,
+                                          num_layers=encoder_num_layers,
+                                          k_dim=k_dim,
+                                          v_dim=v_dim,
+                                          ffn_hidden_size=ffn_hidden_size,
+                                          need_embedding=need_embedding,
+                                          vocab_size=encoder_vocab_size,
+                                          pad_index_in_vocab=pad_index_in_vocab,
+                                          ffn_mode=ffn_mode,
+                                          no_pad=no_pad)
         # 实例化decoder
-        self.decoder = Decoder(embedding_dim=embedding_dim,
-                               num_heads=num_heads,
-                               seq_len=decoder_seq_len,
-                               num_layers=decoder_num_layers,
-                               k_dim=k_dim,
-                               v_dim=v_dim,
-                               ffn_hidden_size=ffn_hidden_size,
-                               need_embedding=need_embedding,
-                               vocab_size=decoder_vocab_size,
-                               pad_index_in_vocab=pad_index_in_vocab,
-                               ffn_mode=ffn_mode,
-                               no_pad=no_pad)
+        self.decoder = TransformerDecoder(embedding_dim=embedding_dim,
+                                          num_heads=num_heads,
+                                          seq_len=decoder_seq_len,
+                                          num_layers=decoder_num_layers,
+                                          k_dim=k_dim,
+                                          v_dim=v_dim,
+                                          ffn_hidden_size=ffn_hidden_size,
+                                          need_embedding=need_embedding,
+                                          vocab_size=decoder_vocab_size,
+                                          pad_index_in_vocab=pad_index_in_vocab,
+                                          ffn_mode=ffn_mode,
+                                          no_pad=no_pad)
 
         self.fc = nn.Linear(embedding_dim, result_size)
+        self.drop_out = nn.Dropout(p=0.5)
 
     def forward(self,
                 encoder_input,
@@ -732,7 +733,7 @@ class Transformer(nn.Module):
             # 将最后作为结束符号的词向量丢弃
             decoder_output = decoder_output[:, 0:-1, :]
 
-        results = self.fc(decoder_output)
+        results = nn.functional.dropout(self.fc(decoder_output), p=0.5, training=self.training)
 
         return results, (encoder_self_attentions, decoder_self_attentions, decoder_encoder_attentions)
 
