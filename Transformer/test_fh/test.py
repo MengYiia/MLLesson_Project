@@ -50,8 +50,8 @@ def test(model, dataset_path, logger, start_index, index) -> None:
     y_temp_test = dataset.inverse_fit_transform(y_temp_test)  # [192, 7]
     y_pre = dataset.inverse_fit_transform(y_pre.squeeze(0).to('cpu').tolist()) # [96,7]
 
-    # y_pre = y_pre.squeeze(0).to('cpu').tolist()
-    # y_pre = y_pre.tolist()
+    # y_temp_test = torch.concat((x_test[start_index], x_test[start_index + 96]), dim=0).to('cpu')
+    # y_pre = y_pre.squeeze(0).to('cpu')
 
     # 创建横坐标
     x1 = list(range(start_index, start_index + 192))
@@ -67,7 +67,7 @@ def test(model, dataset_path, logger, start_index, index) -> None:
 if __name__ == '__main__':
 
     # 模型参数
-    embed_dim = 7
+    embed_dim = 1
     n_heads = 8
     n_layers = 3
     src_len = 95
@@ -87,7 +87,7 @@ if __name__ == '__main__':
                         ffn_mode='conv')
 
     save_model_dir = "../model"
-    model_path = "../model/best_epoch_model_newnewStart_conv3.pth"
+    model_path = "../model/best_epoch_model_newnewStart_conv3_OT.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']

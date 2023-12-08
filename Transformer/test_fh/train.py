@@ -2,7 +2,7 @@ import torch.nn
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from Transformer.test_fh.LossFunction import MaeAndMseLoss, SoftDTW
+from Transformer.test_fh.LossFunction import MaeAndMseLoss
 from model_fh import *
 from DataSet import ETTh1
 import os
@@ -38,7 +38,7 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, w
     num_batches = int(np.ceil(x_train.shape[0] / batch_size))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    criterion = nn.MSELoss().to(device)
+    criterion = MaeAndMseLoss().to(device)
 
     batch_loss_list = []
     model.train()
@@ -124,10 +124,10 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, w
         model.train()  # 切换回训练模式
         if avg_val_loss <= min_val_loss:
             min_val_loss = avg_val_loss
-            logger.info('保存效果最好的模型:best_epoch_model_newnewStart_conv3.pth')
+            logger.info('保存效果最好的模型:best_epoch_model_newnewStart_conv3_noScaler_OT.pth')
             model_dict = model.state_dict()
             model_dict['min_val_loss'] = avg_val_loss
-            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_newnewStart_conv3.pth"))
+            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_newnewStart_conv3_noScaler_OT.pth"))
 
     # 绘损失图
     plt.plot(batch_loss_list)
@@ -138,10 +138,9 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, w
 
 
 if __name__ == '__main__':
-    # torch.autograd.set_detect_anomaly(True)
 
     # 模型参数
-    embed_dim = 7
+    embed_dim = 1
     n_heads = 8
     n_layers = 3
     src_len = 95
@@ -161,7 +160,7 @@ if __name__ == '__main__':
                         ffn_mode='conv')
 
     save_model_dir = "../model"
-    model_path = "../model/best_epoch_model_newnewStart_conv3.pth"
+    model_path = "../model/best_epoch_model_newnewStart_conv3_noScaler_OT.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']
@@ -173,9 +172,10 @@ if __name__ == '__main__':
     logger = setting_logging('TransformerForETTh1')
     # 定义超参数
     lr = 1e-5
-    Epochs = 20
+    Epochs = 40
     batch_size = 256
     dataset_path = "../../data/ETTh1.csv"
+
     weight_decay = 1e-3
 
-    train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, min_val_loss)
+    train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, weight_decay, min_val_loss)
