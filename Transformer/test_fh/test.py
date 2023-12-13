@@ -94,8 +94,8 @@ if __name__ == '__main__':
                         k_dim=dim_k,
                         v_dim=dim_v)
 
-    save_model_dir = "../model"
-    model_path = "../model/best_epoch_model_newStart.pth"
+    save_model_dir = "../model_EnDeTransformer"
+    model_path = "../model_EnDeTransformer/best_epoch_model_newStart.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']

@@ -3,7 +3,6 @@ import pandas as pd
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
-
 # from pandas import read_csv
 # from matplotlib import pyplot
 #
@@ -23,34 +22,44 @@ from sklearn.preprocessing import MinMaxScaler
 # pyplot.show()
 
 
-def data_load(dataset, n_past):
-    dataX, dataY = [], []
-    for i in range(n_past, len(dataset) - n_past):
-        dataX.append(dataset[i - n_past:i, 0:])
-        dataY.append(dataset[i: i + n_past, 0:])
-    return np.array(dataX), np.array(dataY)
+# def data_load(dataset, n_past):
+#     dataX, dataY = [], []
+#     for i in range(n_past, len(dataset) - n_past):
+#         dataX.append(dataset[i - n_past:i, 0:])
+#         dataY.append(dataset[i: i + n_past, 0:])
+#     return np.array(dataX), np.array(dataY)
+#
+#
+# step = 96
+#
+# df = pd.read_csv("data/ETTh1.csv", parse_dates=["date"], index_col=[0])
+# df = df[['OT','HULL', 'MUFL', 'MULL', 'LUFL', 'LULL', 'HUFL']]
+#
+# df_for_training = df[:int(0.6 * len(df))]
+#
+# scaler = MinMaxScaler(feature_range=(-1, 1))
+# df_for_training_scaled = scaler.fit_transform(df_for_training)
+#
+# x_train, y_train = data_load(df_for_training_scaled, step)
+#
+# x_train = torch.tensor(x_train, dtype=torch.float32)
+# y_train = torch.tensor(y_train, dtype=torch.float32)
+#
+# test_x = x_train[:, 0:96, :]
+# pre_y = torch.randn(10260, 1, 7)
+# temp_x = torch.concat((test_x, pre_y), dim=1)
 
-
-step = 96
-
-df = pd.read_csv("data/ETTh1.csv", parse_dates=["date"], index_col=[0])
-df = df[['OT','HULL', 'MUFL', 'MULL', 'LUFL', 'LULL', 'HUFL']]
-
-df_for_training = df[:int(0.6 * len(df))]
-
-scaler = MinMaxScaler(feature_range=(-1, 1))
-df_for_training_scaled = scaler.fit_transform(df_for_training)
-
-x_train, y_train = data_load(df_for_training_scaled, step)
-
-x_train = torch.tensor(x_train, dtype=torch.float32)
-y_train = torch.tensor(y_train, dtype=torch.float32)
-
-
-
-x_test = torch.concat((x_train[0], x_train[0 + 96], x_train[96 + 96], x_train[96+96+96]), dim=0)
-print(x_test[:336].shape)
-print(len(x_train[0][0]))
+y_pre = []
+X_val_batch = torch.randn(2, 10, 3)
+for index in range(96):
+    test_x = X_val_batch[:, index:2, :]
+    if index != 0:
+        tensor_y = torch.stack(y_pre)
+    else:
+        tensor_y = torch.tensor(y_pre)
+    temp_x = torch.concat((test_x, tensor_y), dim=1)
+    tmp_pre = torch.randn(2, 3)
+    y_pre.append(tmp_pre)
 
 # x_train[1][-1]  = y_train[0][0]
 # print(y_train[:, 0, :].shape)
