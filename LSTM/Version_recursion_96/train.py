@@ -9,7 +9,7 @@ from LSTM.Version_recursion_96.model import MultivariateLSTM
 from LSTM.Version_recursion_96.utils import setting_logging
 
 
-def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, min_val_loss = 1e100) -> None:
+def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, weight_decay, min_val_loss = 1e100) -> None:
     """
     训练函数
     :param model: 要训练的模型
@@ -36,7 +36,7 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
     # 计算总共的批次数（向上取整）
     num_batches = int(np.ceil(x_train.shape[0] / batch_size))
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = torch.nn.MSELoss()
     loss_list = []
     model.train()
@@ -87,10 +87,10 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, m
         pbar.close()
         model.train()  # 切换回训练模式
         if avg_val_loss <= min_val_loss:
-            logger.info('保存效果最好的模型:best_epoch_model_96_layer4.pth')
+            logger.info('保存效果最好的模型:best_epoch_model_96_layer4_hidden128.pth')
             model_dict = model.state_dict()
             model_dict['min_val_loss'] = avg_val_loss
-            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_96_layer4.pth"))
+            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_96_layer4_hidden128.pth"))
 
     # 绘损失图
     plt.plot(loss_list)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     # 模型参数
     input_size = 7  # 每个时间步的输入特征数
-    hidden_size = 50
+    hidden_size = 128
     output_size = 7  # 每个时间步的输出特征数
     num_layers = 4
 
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                              num_layers=num_layers)
 
     save_model_dir = "../model_recursion"
-    model_path = "../model_recursion/best_epoch_model_96_layer4.pth"
+    model_path = "../model_recursion/best_epoch_model_96_layer4_hidden128.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']
@@ -124,8 +124,9 @@ if __name__ == '__main__':
     logger = setting_logging('LSTMForETTh1')
     # 定义超参数
     lr = 0.0005
-    Epochs = 50
+    Epochs = 150
     batch_size = 128
     dataset_path = "../../data/ETTh1.csv"
+    weight_decay = 1e-4
 
-    train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, min_val_loss)
+    train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, weight_decay, min_val_loss)

@@ -50,6 +50,7 @@ y_train = torch.tensor(y_train, dtype=torch.float32)
 
 x_test = torch.concat((x_train[0], x_train[0 + 96], x_train[96 + 96], x_train[96+96+96]), dim=0)
 print(x_test[:336].shape)
+print(len(x_train[0][0]))
 
 # x_train[1][-1]  = y_train[0][0]
 # print(y_train[:, 0, :].shape)

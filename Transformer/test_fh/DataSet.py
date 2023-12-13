@@ -20,8 +20,8 @@ class ETTh1:
         self.df_raw = pd.read_csv(path, parse_dates=["date"], index_col=[0])
 
         # if is_scaler == False:
-        self.df_raw = self.df_raw[['OT']]
-        self.df_raw = self.df_raw.values
+        # self.df_raw = self.df_raw[['OT']]
+        # self.df_raw = self.df_raw.values
 
         # 拆分数据集
         self.df = {'train': self.df_raw[:int(0.6 * len(self.df_raw))],
@@ -62,7 +62,8 @@ class ETTh1:
 if __name__ == '__main__':
 
     dataset_path = "../../data/ETTh1.csv"
-    # dataset = ETTh1(dataset_path, step=96)
-    dataset = ETTh1(dataset_path, step=96, is_scaler=False)
+    dataset = ETTh1(dataset_path, step=96)
+    # dataset = ETTh1(dataset_path, step=96, is_scaler=False)
     # x_train.shape = [10260, 96, 7]
     x_train, y_train = dataset.get_data("train")
+    print(x_train.shape)

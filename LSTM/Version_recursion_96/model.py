@@ -16,7 +16,7 @@ class MultivariateLSTM(nn.Module):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, dtype=torch.float32).to(x.device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size, dtype=torch.float32).to(x.device)
         out, _ = self.lstm(x, (h0, c0))
-        out = self.fc(out[:, -1, :])
+        out = self.fc(nn.functional.dropout(out[:, -1, :], p=0.5))
         return out
 
 

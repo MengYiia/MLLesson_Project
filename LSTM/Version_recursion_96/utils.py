@@ -1,5 +1,6 @@
 # 输入前96小时，预测后96小时
 import logging
+import os
 
 import numpy as np
 
@@ -37,3 +38,7 @@ def data_load(dataset, n_past):
         dataX.append(dataset[i - n_past:i, 0:])
         dataY.append(dataset[i, 0:])
     return np.array(dataX), np.array(dataY)
+
+def create_directory(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)

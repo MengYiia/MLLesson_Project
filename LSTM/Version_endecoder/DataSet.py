@@ -1,4 +1,5 @@
 import pandas as pd
+from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 import torch
 
@@ -57,3 +58,11 @@ if __name__ == '__main__':
     dataset_path = "../../data/ETTh1.csv"
     dataset = ETTh1(dataset_path)
     x_train, y_train = dataset.get_data("train")
+    # 创建横坐标
+    x = list(range(len(x_train)))
+    y = []
+    for i in range(len(x)):
+        y.append(x_train[i,0,0])
+
+    plt.plot(x, y)
+    plt.show()

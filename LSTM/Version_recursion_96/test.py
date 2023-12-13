@@ -3,20 +3,20 @@ import os.path
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
 
 from LSTM.Version_recursion_96.DataSet import ETTh1
 from LSTM.Version_recursion_96.model import MultivariateLSTM
-from LSTM.Version_recursion_96.utils import setting_logging
+from LSTM.Version_recursion_96.utils import setting_logging, create_directory
 
 
-def test_1(model, dataset_path, logger, start_index, index):
+def test_1(model, dataset_path, logger, start_index, save_path):
     """
     训练脚本1, 滚轮式预测。输入长度96, 输出长度96。
     :param model: 模型
     :param dataset_path: 数据集路径
     :param logger: 日志器
     :param start_index: 测试起始位置
-    :param index: 绘图变量
     """
     device = ('cuda' if torch.cuda.is_available() else 'cpu')
     if torch.cuda.is_available() is True:
@@ -45,15 +45,24 @@ def test_1(model, dataset_path, logger, start_index, index):
     y_temp_test = dataset.inverse_fit_transform(y_temp_test)
     y_pre = dataset.inverse_fit_transform(y_pre)
 
-    # 创建横坐标
-    x1 = list(range(start_index, start_index + 192))
-    x2 = list(range(start_index + 96, start_index + 192))
+    output_folder = os.path.join("..\..\pic_lstm_96", save_path)
+    create_directory(output_folder)
 
-    plt.plot(x1, y_temp_test[:, index], marker="*", color="k", label='True')
-    plt.plot(x2, y_pre[:, index], marker="o", color="r", label='Pred')
-    plt.legend()
-    plt.title("Test Results: 96 Hours -> 96 Hours")
-    plt.show()
+    for index in range(len(x_test[0][0])):
+        # 创建横坐标
+        x1 = list(range(start_index, start_index + 192))
+        x2 = list(range(start_index + 96, start_index + 192))
+
+        plt.plot(x1, y_temp_test[:, index], marker="*", color="k", label='True')
+        plt.plot(x2, y_pre[:, index], marker="o", color="r", label='Pred')
+        plt.legend()
+        plt.title("The %d variable predicted by the LSTM" %(index+1))
+        # 图片保存路径
+        image_path = os.path.join(output_folder, f"variable_{index + 1}_prediction.png")
+        plt.savefig(image_path)
+        plt.cla()
+    plt.close('all')
+    print("小姐,图老奴给你画好了。")
 
 
 # def test_2(model_recursion, dataset_path, logger, start_index, index):
@@ -99,17 +108,16 @@ def test_1(model, dataset_path, logger, start_index, index):
 if __name__ == '__main__':
     # 模型参数
     input_size = 7  # 每个时间步的输入特征数
-    hidden_size = 50
+    hidden_size = 128
     output_size = 7  # 每个时间步的输出特征数
     num_layers = 4
-    index = 0
     start_index = 100
 
     # 实例化模型, 优化器, 损失函数
     model = MultivariateLSTM(input_size=input_size, hidden_size=hidden_size, output_size=output_size,
                              num_layers=num_layers)
 
-    model_path = "../model_recursion/best_epoch_model_96_layer4.pth"
+    model_path = "../model_recursion/best_epoch_model_96_layer4_hidden128.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         saved_state_dict.pop('min_val_loss')
@@ -119,5 +127,5 @@ if __name__ == '__main__':
 
     logger = setting_logging('LSTMForETTh1_test')
     dataset_path = "../../data/ETTh1.csv"
-    test_1(model, dataset_path, logger, start_index, index)
+    test_1(model, dataset_path, logger, start_index, 'best_epoch_model_96_layer4_hidden128')
     # test_2(model_recursion, dataset_path, logger, start_index, index)
