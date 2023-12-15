@@ -32,11 +32,18 @@ def setting_logging(log_name):
     return logger
 
 
-def data_load(dataset, n_past):
+def data_load_train(dataset, n_past):
     dataX, dataY = [], []
-    for i in range(n_past, len(dataset)):
+    for i in range(n_past, len(dataset) - n_past):
+        dataX.append(dataset[i - n_past:i, 0:])  # [0,n_past]
+        dataY.append(dataset[i, 0:])    # [n_past]
+    return np.array(dataX), np.array(dataY)
+
+def data_load_val_test(dataset, n_past):
+    dataX, dataY = [], []
+    for i in range(n_past, len(dataset) - 336):
         dataX.append(dataset[i - n_past:i, 0:])
-        dataY.append(dataset[i, 0:])
+        dataY.append(dataset[i: i + 336, 0:])
     return np.array(dataX), np.array(dataY)
 
 def create_directory(directory):

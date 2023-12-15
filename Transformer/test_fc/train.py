@@ -5,6 +5,7 @@ from tqdm import tqdm
 from Transformer.test_fc.LossFunction import MaeAndMseLoss
 from Transformer.test_fc.model import iTransformer
 from DataSet import ETTh1
+from Transformer.test_fc.model_torch import TransformerSeqPredictor
 from utils import *
 
 
@@ -84,7 +85,7 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, w
                 end_idx = (i + 1) * batch_size
                 X_val_batch = x_val[start_idx:end_idx]
                 Y_val_batch = y_val[start_idx:end_idx]
-                y_pre = model(X_val_batch[:, 0:96, :]).unsqueeze(1)
+                y_pre = model(X_val_batch).unsqueeze(1)
                 for index in range(1, 96):
                     test_x = X_val_batch[:, index:96, :]
                     temp_x = torch.concat((test_x, y_pre), dim=1)
@@ -97,10 +98,10 @@ def train(model, dataset_path, batch_size, lr, Epochs, logger, save_model_dir, w
         pbar.close()
         if avg_val_loss <= min_val_loss:
             min_val_loss = avg_val_loss
-            logger.info('保存效果最好的模型:best_epoch_model_newStart_layer3.pth')
+            logger.info('保存效果最好的模型:best_epoch_model_newStart_layer6_hideen128_torchmodel.pth')
             model_dict = model.state_dict()
             model_dict['min_val_loss'] = avg_val_loss
-            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_newStart_layer3.pth"))
+            torch.save(model_dict, os.path.join(save_model_dir, "best_epoch_model_newStart_layer6_hideen128_torchmodel.pth"))
 
     # 绘损失图
     plt.plot(batch_loss_list)
@@ -114,23 +115,25 @@ if __name__ == '__main__':
 
     # 模型参数
     embed_dim = 7
-    n_heads = 7
-    n_layers = 3
+    n_heads = 8
+    n_layers = 6
     src_len = 96
     dim_k = 2
     dim_v = 2
 
-    model = iTransformer(embedding_dim=embed_dim,
-                         num_heads=n_heads,
-                         num_layer=n_layers,
-                         result_size=embed_dim,
-                         seq_len=src_len,
-                         k_dim=dim_k,
-                         v_dim=dim_v,
-                         ffn_mode='linear')
+    # model = iTransformer(embedding_dim=embed_dim,
+    #                      num_heads=n_heads,
+    #                      num_layer=n_layers,
+    #                      result_size=embed_dim,
+    #                      seq_len=src_len,
+    #                      k_dim=dim_k,
+    #                      v_dim=dim_v,
+    #                      ffn_mode='linear')
 
-    save_model_dir = "../model_FcTransformer"
-    model_path = "../model_FcTransformer/best_epoch_model_newStart_layer3.pth"
+    model = TransformerSeqPredictor(input_dim=embed_dim, hidden_dim=128, seq_len=src_len, num_heads=n_heads, num_layers=n_layers, output_dim=embed_dim)
+
+    save_model_dir = "../model_FcTransformer_96"
+    model_path = "../model_FcTransformer_96/best_epoch_model_newStart_layer6_hideen128_torchmodel.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         min_val_loss = saved_state_dict['min_val_loss']
@@ -141,7 +144,7 @@ if __name__ == '__main__':
 
     logger = setting_logging('iTransformerForETTh1')
     # 定义超参数
-    lr = 1e-4
+    lr = 1e-5
     Epochs = 40
     batch_size = 256
     dataset_path = "../../data/ETTh1.csv"

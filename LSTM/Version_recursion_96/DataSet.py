@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import torch
 
-from utils import data_load
+from utils import data_load_val_test, data_load_train
 
 
 class ETTh1:
@@ -42,7 +42,10 @@ class ETTh1:
         """
         if mode not in ['train', 'val', 'test']:
             raise ValueError("请输入正确的读取模式！['train', 'val', 'test']")
-        x, y = data_load(self.df[mode], self.step)
+        if mode in ['val', 'test']:
+            x, y = data_load_val_test(self.df[mode], self.step)
+        else:
+            x, y = data_load_train(self.df[mode], self.step)
         x = torch.tensor(x, dtype=torch.float32)
         y = torch.tensor(y, dtype=torch.float32)
 

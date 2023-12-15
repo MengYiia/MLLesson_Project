@@ -29,40 +29,44 @@ def test_1(model, dataset_path, logger, start_index, save_path):
 
     y_pre = []
     temp_test_x = x_test[0 + start_index]
-    with torch.no_grad():
-        for i in range(96):
-            # 0-95 -> 96*, 1-96* -> 97*, 2-96* 97* -> 98* ...
-            # test_x = temp_test_x[i:96]
-            # temp_x = torch.concat((test_x, torch.Tensor(y_pre).to(device)), dim=0)
-            # 0-95 -> 96*, 0-95、96* -> 97*, 0-95、96*、97* -> 98* ...
-            temp_x = torch.concat((temp_test_x[0: 96], torch.Tensor(y_pre).to(device)), dim=0)
-            temp_x = temp_x.unsqueeze(0)
-            tmp_pre = model(temp_x)
-            y_pre.append(tmp_pre.squeeze(0).tolist())
 
-    y_temp_test = torch.concat((x_test[start_index], x_test[start_index + 96]), dim=0).tolist()
 
-    y_temp_test = dataset.inverse_fit_transform(y_temp_test)
-    y_pre = dataset.inverse_fit_transform(y_pre)
 
-    output_folder = os.path.join("..\..\pic_lstm_96", save_path)
-    create_directory(output_folder)
+    for epoch in range(10):
+        with torch.no_grad():
+            for i in range(96):
+                # 0-95 -> 96*, 1-96* -> 97*, 2-96* 97* -> 98* ...
+                # test_x = temp_test_x[i:96]
+                # temp_x = torch.concat((test_x, torch.Tensor(y_pre).to(device)), dim=0)
+                # 0-95 -> 96*, 0-95、96* -> 97*, 0-95、96*、97* -> 98* ...
+                temp_x = torch.concat((temp_test_x[0: 96], torch.Tensor(y_pre).to(device)), dim=0)
+                temp_x = temp_x.unsqueeze(0)
+                tmp_pre = model(temp_x)
+                y_pre.append(tmp_pre.squeeze(0).tolist())
 
-    for index in range(len(x_test[0][0])):
-        # 创建横坐标
-        x1 = list(range(start_index, start_index + 192))
-        x2 = list(range(start_index + 96, start_index + 192))
+        y_temp_test = torch.concat((x_test[start_index], x_test[start_index + 96]), dim=0).tolist()
 
-        plt.plot(x1, y_temp_test[:, index], marker="*", color="k", label='True')
-        plt.plot(x2, y_pre[:, index], marker="o", color="r", label='Pred')
-        plt.legend()
-        plt.title("The %d variable predicted by the LSTM" %(index+1))
-        # 图片保存路径
-        image_path = os.path.join(output_folder, f"variable_{index + 1}_prediction.png")
-        plt.savefig(image_path)
-        plt.cla()
-    plt.close('all')
-    print("小姐,图老奴给你画好了。")
+        y_temp_test = dataset.inverse_fit_transform(y_temp_test)
+        y_pre = dataset.inverse_fit_transform(y_pre)
+
+        output_folder = os.path.join("..\..\pic_lstm_96", save_path)
+        create_directory(output_folder)
+
+        for index in range(len(x_test[0][0])):
+            # 创建横坐标
+            x1 = list(range(start_index, start_index + 192))
+            x2 = list(range(start_index + 96, start_index + 192))
+
+            plt.plot(x1, y_temp_test[:, index], marker="*", color="k", label='True')
+            plt.plot(x2, y_pre[:, index], marker="o", color="r", label='Pred')
+            plt.legend()
+            plt.title("The %d variable predicted by the LSTM" %(index+1))
+            # 图片保存路径
+            image_path = os.path.join(output_folder, f"variable_{index + 1}_prediction.png")
+            plt.savefig(image_path)
+            plt.cla()
+        plt.close('all')
+        print("小姐,图老奴给你画好了。")
 
 
 # def test_2(model_recursion, dataset_path, logger, start_index, index):

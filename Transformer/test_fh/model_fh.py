@@ -89,13 +89,13 @@ class PositionalEncoding(nn.Module):
                 positional_encoding[:, 1::2] = torch.cos(position * div_term[0:-1])
 
         # 定义为固定参数
-        self.register_buffer('positional_encoding', positional_encoding)
+        self.register_buffer('pe', positional_encoding)
 
     def forward(self, seq):
         # 获取当前序列长度，并叠加上位置编码
         # 假定这里x输入的shape为 [batch_size, seq_len, embedding_dim]
         # 广播机制self.positional_encoding shape变为[batch_size, seq_len, embedding_dim]
-        return seq + self.positional_encoding[:seq.shape[1], :]
+        return seq + self.pe[:seq.shape[1], :]
 
 
 class ScaledDotProductAttention(nn.Module):

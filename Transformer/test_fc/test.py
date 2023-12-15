@@ -5,6 +5,7 @@ from tqdm import tqdm
 from Transformer.test_fc.LossFunction import MaeAndMseLoss
 from Transformer.test_fc.model import iTransformer
 from DataSet import ETTh1
+from Transformer.test_fc.model_torch import TransformerSeqPredictor
 from utils import *
 
 def test_1(model, dataset_path, logger, start_index, save_path):
@@ -48,7 +49,7 @@ def test_1(model, dataset_path, logger, start_index, save_path):
         plt.plot(x1, y_temp_test[:, index], marker="*", color="k", label='True')
         plt.plot(x2, y_pre[:, index], marker="o", color="r", label='Pred')
         plt.legend()
-        plt.title("The %d variable predicted by the LSTM" %(index+1))
+        plt.title("The %d variable predicted by the iTransformer" %(index+1))
         # 图片保存路径
         image_path = os.path.join(output_folder, f"variable_{index + 1}_prediction.png")
         plt.savefig(image_path)
@@ -62,24 +63,26 @@ if __name__ == '__main__':
 
     # 模型参数
     embed_dim = 7
-    n_heads = 7
-    n_layers = 3
+    n_heads = 8
+    n_layers = 6
     src_len = 96
     dim_k = 2
     dim_v = 2
     start_index = 0
 
-    model = iTransformer(embedding_dim=embed_dim,
-                        num_heads=n_heads,
-                        num_layer=n_layers,
-                        result_size=embed_dim,
-                        seq_len= src_len,
-                        k_dim=dim_k,
-                        v_dim=dim_v,
-                        ffn_mode='linear')
+    # model = iTransformer(embedding_dim=embed_dim,
+    #                     num_heads=n_heads,
+    #                     num_layer=n_layers,
+    #                     result_size=embed_dim,
+    #                     seq_len= src_len,
+    #                     k_dim=dim_k,
+    #                     v_dim=dim_v,
+    #                     ffn_mode='linear')
 
+    model = TransformerSeqPredictor(input_dim=embed_dim, hidden_dim=128, seq_len=src_len, num_heads=n_heads,
+                                    num_layers=n_layers, output_dim=embed_dim)
 
-    model_path = "../model_FcTransformer/best_epoch_model_newStart_layer3.pth"
+    model_path = "../model_FcTransformer_96/best_epoch_model_newStart_layer6_hideen128_torchmodel.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         saved_state_dict.pop('min_val_loss')
@@ -91,4 +94,4 @@ if __name__ == '__main__':
 
     dataset_path = "../../data/ETTh1.csv"
 
-    test_1(model, dataset_path, logger, start_index, 'best_epoch_model_newStart_layer3')
+    test_1(model, dataset_path, logger, start_index, 'best_epoch_model_newStart_layer6_hideen128_torchmodel')
