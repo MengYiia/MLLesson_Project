@@ -42,7 +42,7 @@ class ETTh1:
         """
         if mode not in ['train', 'val', 'test']:
             raise ValueError("请输入正确的读取模式！['train', 'val', 'test']")
-        if mode in ['val', 'test']:
+        if mode in ['test']:
             x, y = data_load_val_test(self.df[mode], self.step)
         else:
             x, y = data_load_train(self.df[mode], self.step)
