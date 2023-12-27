@@ -39,7 +39,7 @@ def test_1(model, dataset_path, logger, start_index, save_path):
                 # test_x = temp_test_x[i:96]
                 # temp_x = torch.concat((test_x, torch.Tensor(y_pre).to(device)), dim=0)
                 # 0-95 -> 96*, 0-95、96* -> 97*, 0-95、96*、97* -> 98* ...
-                temp_x = torch.concat((temp_test_x[0: 96], torch.Tensor(y_pre).to(device)), dim=0)
+                temp_x = torch.concat((temp_test_x[i: 96], torch.Tensor(y_pre).to(device)), dim=0)
                 temp_x = temp_x.unsqueeze(0)
                 tmp_pre = model(temp_x)
                 y_pre.append(tmp_pre.squeeze(0).tolist())
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     model = MultivariateLSTM(input_size=input_size, hidden_size=hidden_size, output_size=output_size,
                              num_layers=num_layers)
 
-    model_path = "../model_recursion/best_epoch_model_96_layer4_hidden128.pth"
+    model_path = "../model_recursion/best_epoch_model_96_layer4_hidden128_newLossFunction.pth"
     if os.path.exists(model_path):
         saved_state_dict = torch.load(model_path)
         saved_state_dict.pop('min_val_loss')
@@ -131,5 +131,5 @@ if __name__ == '__main__':
 
     logger = setting_logging('LSTMForETTh1_test')
     dataset_path = "../../data/ETTh1.csv"
-    test_1(model, dataset_path, logger, start_index, 'best_epoch_model_96_layer4_hidden128')
+    test_1(model, dataset_path, logger, start_index, 'best_epoch_model_96_layer4_hidden128_newLossFunction')
     # test_2(model_recursion, dataset_path, logger, start_index, index)
